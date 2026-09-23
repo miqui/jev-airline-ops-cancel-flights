@@ -1,4 +1,5 @@
 import json
+import ssl
 import unittest
 import unittest.mock as mock
 
@@ -101,10 +102,11 @@ class TestOpenRouterProvider(unittest.TestCase):
 
         captured = {}
 
-        def fake_urlopen(req, timeout=None):
+        def fake_urlopen(req, timeout=None, context=None):
             captured["url"] = req.full_url
             captured["headers"] = {k.lower(): v for k, v in req.headers.items()}
             captured["body"] = json.loads(req.data.decode("utf-8"))
+            captured["context"] = context
             return FakeResp()
 
         with mock.patch.dict("os.environ", {"OPENROUTER_API_KEY": "test-key"}, clear=True):
@@ -114,6 +116,7 @@ class TestOpenRouterProvider(unittest.TestCase):
 
         self.assertEqual(captured["url"], "https://openrouter.ai/api/alpha/decisions")
         self.assertEqual(captured["headers"].get("authorization"), "Bearer test-key")
+        self.assertIsInstance(captured["context"], ssl.SSLContext)
         self.assertEqual(captured["body"]["model"], "typesafe/jev-1.13")
         self.assertEqual(set(captured["body"]["questions"].keys()), set(questions.keys()))
         self.assertIn("crew_shortage", answers)

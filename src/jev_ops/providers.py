@@ -5,12 +5,19 @@ from __future__ import annotations
 
 import json
 import os
+import ssl
 import time
 import urllib.error
 import urllib.request
 from typing import Protocol
 
+import certifi
+
 DECISIONS_URL = "https://openrouter.ai/api/alpha/decisions"
+
+# Some Python installs (notably python.org builds on macOS) ship without a
+# usable system CA bundle, so verify TLS against certifi explicitly.
+SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
 
 WEATHER_KEYWORDS = ["thunderstorm", "fog", "snow", "icing", "crosswind"]
 MAINT_KEYWORDS = ["aog", "mel", "hydraulic", "inoperative", "leak"]
@@ -124,7 +131,7 @@ class OpenRouterProvider:
         attempt = 0
         while True:
             try:
-                with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                with urllib.request.urlopen(req, timeout=self.timeout, context=SSL_CONTEXT) as resp:
                     payload = json.loads(resp.read().decode("utf-8"))
                     decision = payload.get("decision", payload)
                     return decision.get("answers", {})

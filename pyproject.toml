@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "Flight cancellation decisions via TypeSafe's Jev model (OpenRouter Decisions API)"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "certifi>=2026.7.22",
+]
 
 [project.scripts]
 jev-ops = "jev_ops.cli:main"
