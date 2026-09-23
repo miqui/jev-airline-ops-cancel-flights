@@ -131,9 +131,7 @@ class OpenRouterProvider:
         attempt = 0
         while True:
             try:
-                with urllib.request.urlopen(
-                    req, timeout=self.timeout, context=SSL_CONTEXT
-                ) as resp:
+                with urllib.request.urlopen(req, timeout=self.timeout, context=SSL_CONTEXT) as resp:
                     payload = json.loads(resp.read().decode("utf-8"))
                     decision = payload.get("decision", payload)
                     return decision.get("answers", {})
