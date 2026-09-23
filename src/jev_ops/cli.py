@@ -12,6 +12,8 @@ from .generator import write_flights_csv
 from .providers import DryRunProvider, OpenRouterProvider, ProviderError
 from .questions import build_questions, build_state
 
+DEFAULT_QUESTIONS_LOG = "questions-log.json"
+
 
 def _cmd_generate(args: argparse.Namespace) -> int:
     out_path = write_flights_csv(args.out, args.count, args.seed)
@@ -37,6 +39,8 @@ def _cmd_decide(args: argparse.Namespace) -> int:
             return 1
 
     questions = build_questions()
+    if args.log_questions:
+        output.write_json(args.log_questions, questions)
     results = []
     for row in rows:
         state = build_state(row)
@@ -51,10 +55,13 @@ def _cmd_decide(args: argparse.Namespace) -> int:
     output.write_results(args.out, results, args.format)
     cancelled = sum(1 for r in results if r["decision"] == "cancel")
     review = sum(1 for r in results if r["review"] == "yes")
-    print(
+    summary = (
         f"Decided {len(results)} flights -> {cancelled} cancel, "
         f"{review} flagged for review. Wrote {args.out}"
     )
+    if args.log_questions:
+        summary += f", questions to {args.log_questions}"
+    print(summary)
     return 0
 
 
@@ -75,6 +82,15 @@ def build_parser() -> argparse.ArgumentParser:
     p_dec.add_argument("--model", default="typesafe/jev-1.13")
     p_dec.add_argument("--threshold", type=float, default=0.7)
     p_dec.add_argument("--dry-run", action="store_true")
+    p_dec.add_argument(
+        "--log-questions",
+        "--questions-log",
+        nargs="?",
+        const=DEFAULT_QUESTIONS_LOG,
+        default=None,
+        metavar="PATH",
+        help=f"Log questions to PATH (default: {DEFAULT_QUESTIONS_LOG})",
+    )
     p_dec.set_defaults(func=_cmd_decide)
 
     return parser

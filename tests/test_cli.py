@@ -1,5 +1,6 @@
 import csv
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -58,6 +59,117 @@ class TestCli(unittest.TestCase):
             self.assertEqual(rc, 0)
             data = json.loads(results_path.read_text())
             self.assertEqual(len(data), 5)
+
+    def test_decide_log_questions(self):
+        with tempfile.TemporaryDirectory() as d:
+            flights_path = Path(d) / "flights.csv"
+            results_path = Path(d) / "results.csv"
+
+            main(["generate", "--out", str(flights_path), "--count", "5", "--seed", "1"])
+            orig_cwd = os.getcwd()
+            try:
+                os.chdir(d)
+                rc = main(
+                    [
+                        "decide",
+                        "--in",
+                        str(flights_path),
+                        "--out",
+                        str(results_path),
+                        "--dry-run",
+                        "--log-questions",
+                    ]
+                )
+                self.assertEqual(rc, 0)
+                log_file = Path("questions-log.json")
+                self.assertTrue(log_file.exists())
+                data = json.loads(log_file.read_text())
+                self.assertIn("crew_shortage", data)
+                self.assertIn("maintenance_blocked", data)
+                self.assertIn("severe_weather", data)
+                self.assertIn("recommended_action", data)
+                self.assertIn("operational_risk", data)
+            finally:
+                os.chdir(orig_cwd)
+
+    def test_decide_questions_log_alias(self):
+        with tempfile.TemporaryDirectory() as d:
+            flights_path = Path(d) / "flights.csv"
+            results_path = Path(d) / "results.csv"
+
+            main(["generate", "--out", str(flights_path), "--count", "5", "--seed", "1"])
+            orig_cwd = os.getcwd()
+            try:
+                os.chdir(d)
+                rc = main(
+                    [
+                        "decide",
+                        "--in",
+                        str(flights_path),
+                        "--out",
+                        str(results_path),
+                        "--dry-run",
+                        "--questions-log",
+                    ]
+                )
+                self.assertEqual(rc, 0)
+                log_file = Path("questions-log.json")
+                self.assertTrue(log_file.exists())
+            finally:
+                os.chdir(orig_cwd)
+
+    def test_decide_log_questions_custom_path(self):
+        with tempfile.TemporaryDirectory() as d:
+            flights_path = Path(d) / "flights.csv"
+            results_path = Path(d) / "results.csv"
+            log_path = Path(d) / "my-questions.json"
+
+            main(["generate", "--out", str(flights_path), "--count", "5", "--seed", "1"])
+            orig_cwd = os.getcwd()
+            try:
+                os.chdir(d)
+                rc = main(
+                    [
+                        "decide",
+                        "--in",
+                        str(flights_path),
+                        "--out",
+                        str(results_path),
+                        "--dry-run",
+                        "--log-questions",
+                        str(log_path),
+                    ]
+                )
+                self.assertEqual(rc, 0)
+                self.assertTrue(log_path.exists())
+                self.assertIn("crew_shortage", json.loads(log_path.read_text()))
+                self.assertFalse(Path("questions-log.json").exists())
+            finally:
+                os.chdir(orig_cwd)
+
+    def test_decide_without_log_questions(self):
+        with tempfile.TemporaryDirectory() as d:
+            flights_path = Path(d) / "flights.csv"
+            results_path = Path(d) / "results.csv"
+
+            main(["generate", "--out", str(flights_path), "--count", "5", "--seed", "1"])
+            orig_cwd = os.getcwd()
+            try:
+                os.chdir(d)
+                rc = main(
+                    [
+                        "decide",
+                        "--in",
+                        str(flights_path),
+                        "--out",
+                        str(results_path),
+                        "--dry-run",
+                    ]
+                )
+                self.assertEqual(rc, 0)
+                self.assertFalse(Path("questions-log.json").exists())
+            finally:
+                os.chdir(orig_cwd)
 
 
 if __name__ == "__main__":

@@ -82,6 +82,12 @@ uv run jev-ops decide --in data/flights.csv --out results.csv \
 
 # JSON output instead of CSV
 uv run jev-ops decide --in data/flights.csv --out results.json --format json --dry-run
+
+# Log Jev questions to questions-log.json
+uv run jev-ops decide --in data/flights.csv --out results.csv --dry-run --log-questions
+
+# Log Jev questions to a custom file
+uv run jev-ops decide --in data/flights.csv --out results.csv --dry-run --log-questions logs/questions.json
 ```
 
 Expected `results.csv` columns:
