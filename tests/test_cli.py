@@ -4,6 +4,7 @@ import json
 import os
 import tempfile
 import unittest
+import unittest.mock as mock
 from contextlib import redirect_stderr
 from pathlib import Path
 
@@ -226,6 +227,18 @@ class TestCli(unittest.TestCase):
             self.assertEqual(rc, 1)
             self.assertIn("missing required column(s): load_factor", stderr.getvalue())
             self.assertFalse(results_path.exists())
+
+    def test_main_catches_unexpected_exception(self):
+        with tempfile.TemporaryDirectory() as d:
+            flights_path = Path(d) / "flights.csv"
+
+            stderr = io.StringIO()
+            with mock.patch("jev_ops.cli.write_flights_csv", side_effect=RuntimeError("boom")):
+                with redirect_stderr(stderr):
+                    rc = main(["generate", "--out", str(flights_path), "--count", "5"])
+            self.assertEqual(rc, 1)
+            self.assertIn("error: unexpected failure: boom", stderr.getvalue())
+            self.assertFalse(flights_path.exists())
 
     def test_decide_malformed_row_does_not_abort_batch(self):
         with tempfile.TemporaryDirectory() as d:
