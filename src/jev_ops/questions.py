@@ -11,6 +11,18 @@ WEATHER_WEIGHT = 0.40
 
 TURNAROUND_MINIMUM = 45
 
+# Columns build_state() indexes directly; maintenance/weather remarks are
+# read via .get() elsewhere and are therefore optional.
+REQUIRED_COLUMNS = [
+    "flight_no",
+    "origin",
+    "dest",
+    "scheduled_departure",
+    "aircraft_type",
+    "crew_minutes_remaining",
+    "load_factor",
+]
+
 
 def build_state(row: dict) -> dict:
     """Subset of CSV fields, nested, containing only what the questions need."""

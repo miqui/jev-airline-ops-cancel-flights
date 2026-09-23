@@ -105,6 +105,12 @@ CSV field or an unrecoverable provider error — so one bad flight doesn't
 abort the rest of the batch. When any flight errors, `jev-ops decide` still
 writes all other results but exits with status 1.
 
+`decide --in` requires the input CSV to have a `flight_no`, `origin`, `dest`,
+`scheduled_departure`, `aircraft_type`, `crew_minutes_remaining`, and
+`load_factor` column (`maintenance_remarks`/`weather_remarks` are optional).
+If any of those columns are missing from the header, `jev-ops` fails fast
+with a clear error listing the missing column(s) instead of processing rows.
+
 ## Testing
 
 ```bash

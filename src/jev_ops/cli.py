@@ -10,7 +10,7 @@ from pathlib import Path
 from . import compose, output
 from .generator import write_flights_csv
 from .providers import DryRunProvider, OpenRouterProvider, ProviderError
-from .questions import build_questions, build_state
+from .questions import REQUIRED_COLUMNS, build_questions, build_state
 
 DEFAULT_QUESTIONS_LOG = "questions-log.json"
 
@@ -24,11 +24,20 @@ def _cmd_generate(args: argparse.Namespace) -> int:
 def _read_flights(path: str | Path) -> list[dict]:
     try:
         with Path(path).open(newline="") as f:
-            return list(csv.DictReader(f))
+            reader = csv.DictReader(f)
+            rows = list(reader)
     except FileNotFoundError as e:
         raise ProviderError(f"input file not found: {path}") from e
     except OSError as e:
         raise ProviderError(f"cannot read input file {path}: {e}") from e
+
+    fieldnames = reader.fieldnames or []
+    missing = [c for c in REQUIRED_COLUMNS if c not in fieldnames]
+    if missing:
+        raise ProviderError(
+            f"input file {path} is missing required column(s): {', '.join(missing)}"
+        )
+    return rows
 
 
 def _cmd_decide(args: argparse.Namespace) -> int:
