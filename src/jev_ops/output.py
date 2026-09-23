@@ -34,7 +34,7 @@ def write_csv(path: str | Path, results: list[dict]) -> Path:
     return out_path
 
 
-def write_json(path: str | Path, results: list[dict]) -> Path:
+def write_json(path: str | Path, results: list[dict] | dict) -> Path:
     out_path = Path(path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with out_path.open("w") as f:
