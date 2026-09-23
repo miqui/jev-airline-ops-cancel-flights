@@ -55,10 +55,13 @@ def _cmd_decide(args: argparse.Namespace) -> int:
     output.write_results(args.out, results, args.format)
     cancelled = sum(1 for r in results if r["decision"] == "cancel")
     review = sum(1 for r in results if r["review"] == "yes")
-    print(
+    summary = (
         f"Decided {len(results)} flights -> {cancelled} cancel, "
         f"{review} flagged for review. Wrote {args.out}"
     )
+    if args.log_questions:
+        summary += f", questions to {args.log_questions}"
+    print(summary)
     return 0
 
 
