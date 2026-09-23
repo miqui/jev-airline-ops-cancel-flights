@@ -97,8 +97,13 @@ flight_no,decision,cancel,cancel_probability,crew_shortage,maintenance_blocked,
 severe_weather,recommended_action,operational_risk,confidence,review,provider,errors
 ```
 
-`decision` is one of `operate` / `review` / `cancel`; `cancel` is `yes`/`no`;
-`cancel_probability` is the composite score in [0, 1].
+`decision` is one of `operate` / `review` / `cancel` / `error`; `cancel` is
+`yes`/`no`; `cancel_probability` is the composite score in [0, 1]. A flight
+gets `error` (with `review=yes` and a message in `errors`) when its row or
+provider call failed before a decision could be composed — e.g. a malformed
+CSV field or an unrecoverable provider error — so one bad flight doesn't
+abort the rest of the batch. When any flight errors, `jev-ops decide` still
+writes all other results but exits with status 1.
 
 ## Testing
 

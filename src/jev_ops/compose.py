@@ -27,6 +27,27 @@ def _get(d: dict, key: str, default=None):
         return default
 
 
+def error_result(flight_no: str, message: str, provider_name: str) -> dict:
+    """Placeholder result for a flight that failed before answers were composed
+    (e.g. a malformed CSV row or an unrecoverable provider error), so one bad
+    flight doesn't abort the whole batch."""
+    return {
+        "flight_no": flight_no,
+        "decision": "error",
+        "cancel": "no",
+        "cancel_probability": "",
+        "crew_shortage": "",
+        "maintenance_blocked": "",
+        "severe_weather": "",
+        "recommended_action": "",
+        "operational_risk": "",
+        "confidence": "",
+        "review": "yes",
+        "provider": provider_name,
+        "errors": message,
+    }
+
+
 def compose_result(flight_no: str, answers: dict, threshold: float, provider_name: str) -> dict:
     errors = []
 
