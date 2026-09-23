@@ -123,7 +123,11 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    return args.func(args)
+    try:
+        return args.func(args)
+    except Exception as e:  # last-resort guard so bugs don't leak a raw traceback
+        print(f"error: unexpected failure: {e}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":
