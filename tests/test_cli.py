@@ -194,6 +194,39 @@ class TestCli(unittest.TestCase):
             self.assertIn("input file not found", stderr.getvalue())
             self.assertFalse(results_path.exists())
 
+    def test_decide_missing_required_column(self):
+        with tempfile.TemporaryDirectory() as d:
+            flights_path = Path(d) / "flights.csv"
+            results_path = Path(d) / "results.csv"
+
+            main(["generate", "--out", str(flights_path), "--count", "5", "--seed", "1"])
+            with flights_path.open() as f:
+                reader = csv.DictReader(f)
+                fieldnames = [c for c in reader.fieldnames if c != "load_factor"]
+                rows = list(reader)
+            with flights_path.open("w", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                for row in rows:
+                    del row["load_factor"]
+                    writer.writerow(row)
+
+            stderr = io.StringIO()
+            with redirect_stderr(stderr):
+                rc = main(
+                    [
+                        "decide",
+                        "--in",
+                        str(flights_path),
+                        "--out",
+                        str(results_path),
+                        "--dry-run",
+                    ]
+                )
+            self.assertEqual(rc, 1)
+            self.assertIn("missing required column(s): load_factor", stderr.getvalue())
+            self.assertFalse(results_path.exists())
+
     def test_decide_malformed_row_does_not_abort_batch(self):
         with tempfile.TemporaryDirectory() as d:
             flights_path = Path(d) / "flights.csv"
