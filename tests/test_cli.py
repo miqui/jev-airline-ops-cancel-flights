@@ -1,8 +1,10 @@
 import csv
+import io
 import json
 import os
 import tempfile
 import unittest
+from contextlib import redirect_stderr
 from pathlib import Path
 
 from jev_ops.cli import main
@@ -170,6 +172,27 @@ class TestCli(unittest.TestCase):
                 self.assertFalse(Path("questions-log.json").exists())
             finally:
                 os.chdir(orig_cwd)
+
+    def test_decide_missing_input_file(self):
+        with tempfile.TemporaryDirectory() as d:
+            missing_path = Path(d) / "does-not-exist.csv"
+            results_path = Path(d) / "results.csv"
+
+            stderr = io.StringIO()
+            with redirect_stderr(stderr):
+                rc = main(
+                    [
+                        "decide",
+                        "--in",
+                        str(missing_path),
+                        "--out",
+                        str(results_path),
+                        "--dry-run",
+                    ]
+                )
+            self.assertEqual(rc, 1)
+            self.assertIn("input file not found", stderr.getvalue())
+            self.assertFalse(results_path.exists())
 
 
 if __name__ == "__main__":

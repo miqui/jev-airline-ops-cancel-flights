@@ -22,12 +22,21 @@ def _cmd_generate(args: argparse.Namespace) -> int:
 
 
 def _read_flights(path: str | Path) -> list[dict]:
-    with Path(path).open(newline="") as f:
-        return list(csv.DictReader(f))
+    try:
+        with Path(path).open(newline="") as f:
+            return list(csv.DictReader(f))
+    except FileNotFoundError as e:
+        raise ProviderError(f"input file not found: {path}") from e
+    except OSError as e:
+        raise ProviderError(f"cannot read input file {path}: {e}") from e
 
 
 def _cmd_decide(args: argparse.Namespace) -> int:
-    rows = _read_flights(args.input)
+    try:
+        rows = _read_flights(args.input)
+    except ProviderError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 1
 
     if args.dry_run:
         provider = DryRunProvider()
