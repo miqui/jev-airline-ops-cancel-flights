@@ -194,6 +194,49 @@ class TestCli(unittest.TestCase):
             self.assertIn("input file not found", stderr.getvalue())
             self.assertFalse(results_path.exists())
 
+    def test_decide_malformed_row_does_not_abort_batch(self):
+        with tempfile.TemporaryDirectory() as d:
+            flights_path = Path(d) / "flights.csv"
+            results_path = Path(d) / "results.csv"
+
+            main(["generate", "--out", str(flights_path), "--count", "5", "--seed", "1"])
+            with flights_path.open() as f:
+                reader = csv.DictReader(f)
+                fieldnames = reader.fieldnames
+                rows = list(reader)
+            rows[2]["crew_minutes_remaining"] = "not-a-number"
+            with flights_path.open("w", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows(rows)
+
+            stderr = io.StringIO()
+            with redirect_stderr(stderr):
+                rc = main(
+                    [
+                        "decide",
+                        "--in",
+                        str(flights_path),
+                        "--out",
+                        str(results_path),
+                        "--dry-run",
+                    ]
+                )
+            self.assertEqual(rc, 1)
+            self.assertIn(f"error: flight {rows[2]['flight_no']}", stderr.getvalue())
+
+            with results_path.open() as f:
+                results = list(csv.DictReader(f))
+            self.assertEqual(len(results), 5)
+            bad_row = results[2]
+            self.assertEqual(bad_row["decision"], "error")
+            self.assertEqual(bad_row["review"], "yes")
+            self.assertNotEqual(bad_row["errors"], "")
+            good_rows = [r for i, r in enumerate(results) if i != 2]
+            for row in good_rows:
+                self.assertNotEqual(row["decision"], "error")
+                self.assertEqual(row["errors"], "")
+
 
 if __name__ == "__main__":
     unittest.main()

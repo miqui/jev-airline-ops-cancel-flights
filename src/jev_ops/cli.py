@@ -51,14 +51,18 @@ def _cmd_decide(args: argparse.Namespace) -> int:
     if args.log_questions:
         output.write_json(args.log_questions, questions)
     results = []
+    errored = 0
     for row in rows:
-        state = build_state(row)
+        flight_no = row.get("flight_no", "<unknown>")
         try:
+            state = build_state(row)
             answers = provider.decide(row, state, questions, args.model)
-        except ProviderError as e:
-            print(f"error: flight {row.get('flight_no')}: {e}", file=sys.stderr)
-            return 1
-        result = compose.compose_result(row["flight_no"], answers, args.threshold, provider.name)
+        except (ProviderError, KeyError, ValueError) as e:
+            print(f"error: flight {flight_no}: {e}", file=sys.stderr)
+            results.append(compose.error_result(flight_no, str(e), provider.name))
+            errored += 1
+            continue
+        result = compose.compose_result(flight_no, answers, args.threshold, provider.name)
         results.append(result)
 
     output.write_results(args.out, results, args.format)
@@ -68,10 +72,12 @@ def _cmd_decide(args: argparse.Namespace) -> int:
         f"Decided {len(results)} flights -> {cancelled} cancel, "
         f"{review} flagged for review. Wrote {args.out}"
     )
+    if errored:
+        summary += f", {errored} errored"
     if args.log_questions:
         summary += f", questions to {args.log_questions}"
     print(summary)
-    return 0
+    return 1 if errored else 0
 
 
 def build_parser() -> argparse.ArgumentParser:
