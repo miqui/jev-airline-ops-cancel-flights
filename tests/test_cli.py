@@ -63,6 +63,35 @@ class TestCli(unittest.TestCase):
             data = json.loads(results_path.read_text())
             self.assertEqual(len(data), 5)
 
+    def test_decide_output_dir(self):
+        with tempfile.TemporaryDirectory() as d:
+            flights_path = Path(d) / "flights.csv"
+            out_dir = Path(d) / "out"
+            log_dir_target = out_dir / "results.csv"
+            log_questions_target = out_dir / "questions-log.json"
+
+            main(["generate", "--out", str(flights_path), "--count", "5", "--seed", "1"])
+            rc = main(
+                [
+                    "decide",
+                    "--in",
+                    str(flights_path),
+                    "--out",
+                    "results.csv",
+                    "--output-dir",
+                    str(out_dir),
+                    "--dry-run",
+                    "--log-questions",
+                ]
+            )
+            self.assertEqual(rc, 0)
+            self.assertTrue(log_dir_target.exists())
+            self.assertTrue(log_questions_target.exists())
+
+            with log_dir_target.open() as f:
+                rows = list(csv.DictReader(f))
+            self.assertEqual(len(rows), 5)
+
     def test_decide_log_questions(self):
         with tempfile.TemporaryDirectory() as d:
             flights_path = Path(d) / "flights.csv"

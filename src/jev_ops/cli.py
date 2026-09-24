@@ -40,12 +40,24 @@ def _read_flights(path: str | Path) -> list[dict]:
     return rows
 
 
+def _resolve_output_path(path: str, output_dir: str | None) -> str:
+    """Join `path`'s filename onto `output_dir` when given, else return `path` unchanged."""
+    if not output_dir:
+        return path
+    return str(Path(output_dir) / Path(path).name)
+
+
 def _cmd_decide(args: argparse.Namespace) -> int:
     try:
         rows = _read_flights(args.input)
     except ProviderError as e:
         print(f"error: {e}", file=sys.stderr)
         return 1
+
+    out_path = _resolve_output_path(args.out, args.output_dir)
+    log_questions_path = (
+        _resolve_output_path(args.log_questions, args.output_dir) if args.log_questions else None
+    )
 
     if args.dry_run:
         provider = DryRunProvider()
@@ -57,8 +69,8 @@ def _cmd_decide(args: argparse.Namespace) -> int:
             return 1
 
     questions = build_questions()
-    if args.log_questions:
-        output.write_json(args.log_questions, questions)
+    if log_questions_path:
+        output.write_json(log_questions_path, questions)
     results = []
     errored = 0
     for row in rows:
@@ -74,17 +86,17 @@ def _cmd_decide(args: argparse.Namespace) -> int:
         result = compose.compose_result(flight_no, answers, args.threshold, provider.name)
         results.append(result)
 
-    output.write_results(args.out, results, args.format)
+    output.write_results(out_path, results, args.format)
     cancelled = sum(1 for r in results if r["decision"] == "cancel")
     review = sum(1 for r in results if r["review"] == "yes")
     summary = (
         f"Decided {len(results)} flights -> {cancelled} cancel, "
-        f"{review} flagged for review. Wrote {args.out}"
+        f"{review} flagged for review. Wrote {out_path}"
     )
     if errored:
         summary += f", {errored} errored"
-    if args.log_questions:
-        summary += f", questions to {args.log_questions}"
+    if log_questions_path:
+        summary += f", questions to {log_questions_path}"
     print(summary)
     return 1 if errored else 0
 
@@ -102,6 +114,15 @@ def build_parser() -> argparse.ArgumentParser:
     p_dec = sub.add_parser("decide", help="Decide cancellations for a flight schedule")
     p_dec.add_argument("--in", dest="input", required=True)
     p_dec.add_argument("--out", default="results.csv")
+    p_dec.add_argument(
+        "--output-dir",
+        default=None,
+        metavar="DIR",
+        help=(
+            "Directory to write --out and --log-questions files into "
+            "(filenames are kept, DIR is created if missing)"
+        ),
+    )
     p_dec.add_argument("--format", choices=["csv", "json"], default="csv")
     p_dec.add_argument("--model", default="typesafe/jev-1.13")
     p_dec.add_argument("--threshold", type=float, default=0.7)
